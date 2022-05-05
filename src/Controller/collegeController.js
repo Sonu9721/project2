@@ -1,7 +1,7 @@
 const collegeModel=require('../Models/collegeModel')
 const internModel= require('../Models/internModel')
 const mongoose = require('mongoose')
-const ObjectId = mongoose.Types.ObjectId
+//const ObjectId = mongoose.Types.ObjectId 
 
 
 const isValid=function(value){
@@ -44,10 +44,15 @@ const createCollege = async function(req,res){
                     res.status(400).send({status:false, message: `Logolink is required`})
                     return
                 }
+
+                if(! (/^(?:http(s)?:\/\/)?[\w.-]+(?:\.[\w\.-]+)+[\w\-\._~:/?#[\]@!\$&'\(\)\*\+,;=.]+$/.test(logoLink))){
+                  return res.status(400).send({ status: false, message: 'Please provide valid URL' })
+              }
+      
                 //validation ends
                 let data= req.body
-                const college = await collegeModel.create(data)
-                res.status(201).send({status:true, msg:'College created succefully',data:college})
+                const collegeData = await collegeModel.create(data)
+                res.status(201).send({status:true, msg:'College created succefully',data:collegeData})
 
   
     } catch (error) {
@@ -116,7 +121,28 @@ const createIntern = async function(req,res){
 }
 
 
+const  getCollegeDetails= async function (req, res) {
+  try {
+      const collegeName = req.query.name
+      if (!collegeName){
+       return res.status(400).send({ status: false, message: 'College name is required to access data' })}
+    
+      const newCollege = await collegeModel.findOne({ name: collegeName }, { name: 1, fullName: 1, logoLink: 1 });
+
+      if (!newCollege){
+         return res.status(404).send({ status: false, message: `College does not exit` })};
+      const interns = await internModel.find({ collegeId: newCollege._id, isDeleted: false },
+      { __v: 0, isDeleted: 0, collegeId: 0 });
+      res.status(200).send({ data: { name: newCollege.name, fullName: newCollege.fullName, logoLink: newCollege.logoLink, interns: interns}})
+
+  } catch (error) {
+      res.status(500).send({ status: false, message: error.message });
+  }
+}
+
 
 module.exports.createCollege=createCollege
 
 module.exports.createIntern=createIntern
+
+module.exports.getCollegeDetails=getCollegeDetails
