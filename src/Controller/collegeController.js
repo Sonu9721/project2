@@ -34,6 +34,7 @@ const createCollege = async function(req,res){
                     res.status(400).send({status:false, message:`College name is required`})
                     return
                 }
+                
         
                 if(!isValid(fullName)){
                     res.status(400).send({status:false, message: `College fullName is required`})
@@ -56,7 +57,7 @@ const createCollege = async function(req,res){
 
   
     } catch (error) {
-        res.status(500).send({status:false, message:error.message})
+        res.status(500).send({status:false, message:error.message})//==>synchronuos
     }
 }
 
@@ -73,7 +74,7 @@ const createIntern = async function(req,res){
         }
     
         //Extract params
-        const {name, email, mobile, collegeId} = requestBody;
+        const {name, email, mobile, collegeName} = requestBody;
     
         //Validation starts
         if(!isValid(name)){
@@ -90,6 +91,11 @@ const createIntern = async function(req,res){
             res.status(400).send({status:false, message: `Emial should be a valid email address`})
             return
         }
+        const emailPresent = await internModel.findOne({ email: email, isDeleted: false })
+
+        if (emailPresent) {
+            return res.status(400).send({ status: false, error: `${email} this Email already exist` })
+        }
     
         if(!isValid(mobile)){
           res.status(400).send({status:false, message:'Mobile number is required'})
@@ -101,18 +107,25 @@ const createIntern = async function(req,res){
             return
         }
 
-        if(!isValid(collegeId)){
-            res.status(400).send({status:false, message:'college Id is required'})
-            return
-          }
-    
-        if(!isValidObjectId(collegeId)){
-          res.status(400).send({status:false, message:'${collegeId} is not a valid college id'})
-          return
+        let mobilePresent = await internModel.findOne({ mobile: mobile, isDeleted: false })
+        if (mobilePresent) {
+            return res.status(400).send({ status: false, error: `${mobile} this number already exist` })
         }
 
-        let data = req.body
-        const Intern = await internModel.create(data)
+        if(!isValid(collegeName)){
+            res.status(400).send({status:false, message:'college Id is required'})
+            return
+        }
+
+        let isCollegeNamePresent= await collegeModel.findOne({name: collegeName,isDeleted:false})
+      if (!isCollegeNamePresent){
+       return res.status(400).send({ status: false, message: 'This Collage is not present' })}
+ 
+       let collegeId = isCollegeNamePresent._id
+       requestBody["collegeId"] = collegeId
+
+        
+        const Intern = await internModel.create(requestBody)
                 res.status(201).send({status:true, msg:'Intern created succefully',data:Intern})
 
     } catch (error) {
